@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Brian Shapiro Cope Bingo</title>
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: #f5f4f0; color: #1a1a1a; min-height: 100vh; padding: 2rem 1rem; }
+  .container { max-width: 1100px; margin: 0 auto; }
+  h1 { font-family: 'Bangers', cursive; font-size: 3rem; letter-spacing: 4px; line-height: 1; margin-bottom: 4px; }
+  .subtitle { font-size: 14px; color: #666; margin-bottom: 1.5rem; }
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 1.5rem; }
+  .btn-primary { background: #1a1a1a; color: #fff; border: none; padding: 10px 22px; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; }
+  .btn-primary:hover { background: #333; }
+  .btn-sec { background: #fff; border: 1px solid #ccc; padding: 10px 22px; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: #1a1a1a; cursor: pointer; }
+  .btn-sec:hover { background: #f0efeb; }
+  .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
+  .bingo-card { background: #fff; border: 1px solid #ddd; border-radius: 12px; overflow: hidden; }
+  .card-header { display: grid; grid-template-columns: repeat(5, 1fr); background: #1a1a1a; }
+  .card-header span { font-family: 'Bangers', cursive; font-size: 1.7rem; letter-spacing: 2px; color: #fff; text-align: center; padding: 8px 4px; }
+  .bingo-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; background: #e0ddd5; }
+  .bingo-cell { background: #fff; padding: 6px 4px; text-align: center; font-size: 10px; min-height: 52px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.12s; line-height: 1.3; color: #1a1a1a; user-select: none; }
+  .bingo-cell:hover { background: #f5f4f0; }
+  .bingo-cell.marked { background: #1a1a1a; color: #fff; font-weight: 500; }
+  .bingo-cell.free { background: #fff8e1; color: #b8860b; font-weight: 500; font-size: 9px; cursor: default; line-height: 1.3; }
+  .card-footer { font-size: 11px; color: #999; text-align: right; padding: 6px 12px; border-top: 1px solid #eee; }
+  .print-hint { font-size: 12px; color: #888; margin-top: 1.5rem; }
+  @media print {
+    body { background: #fff; padding: 0; }
+    .btn-row, h1, .subtitle, .print-hint { display: none !important; }
+    .cards-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .bingo-cell.marked { background: #fff !important; color: #1a1a1a !important; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Brian Shapiro Cope Bingo</h1>
+  <p class="subtitle">24 randomized cards — each draws 24 of 30 squares randomly. Click cells to mark them during play.</p>
+  <div class="btn-row">
+    <button class="btn-primary" onclick="generateCards()">&#x21BA; Regenerate all cards</button>
+    <button class="btn-sec" onclick="window.print()">&#x1F5A8; Print all cards</button>
+    <button class="btn-sec" onclick="clearMarks()">&#x2715; Clear all marks</button>
+  </div>
+  <div class="cards-grid" id="cardsGrid"></div>
+  <p class="print-hint">Tip: click any cell to mark it during play. Each card is uniquely randomized.</p>
+</div>
+<script>
+  const ITEMS = [
+    '"34-count felon"',
+    'Calls someone a "fake Christian"',
+    '"Liable sexual abuser"',
+    'Name drops Piers Morgan',
+    '"Trump mushroom gobbler"',
+    'Interrupts opponent mid-sentence',
+    'Claims to be an independent',
+    '"I didn\'t vote for Obama OR Hillary"',
+    'Brings up January 6th unprompted',
+    'Mentions Epstein files',
+    'Ad hominem attack',
+    '"I believe the victims"',
+    'Appeals to majority opinion',
+    '"I\'ve said this on Piers Morgan"',
+    'Claims Trump can\'t recite a Bible verse',
+    'Moves goalposts',
+    '"You\'re a Trump defender"',
+    'Gets visibly flustered / raises voice',
+    'Accuses opponent of being in a cult',
+    '"That is my opinion"',
+    '"I\'ve called out both sides"',
+    'Mentions Trump 5+ times',
+    'Whataboutism',
+    'Makes accusation without evidence',
+    'Name drops a right-winger as his "friend"',
+    '"I\'m not a liberal"',
+    'Calls someone uneducated or uninformed',
+    'Mentions his radio show credentials',
+    '"Fake Christian" cross around neck comment',
+    'Appeals to emotion instead of argument'
+  ];
+
+  const FREE_TEXT = 'FREE SPACE - Brian loses the debate';
+
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function generateCards() {
+    const grid = document.getElementById('cardsGrid');
+    grid.innerHTML = '';
+    const today = new Date().toLocaleDateString();
+    for (let c = 0; c < 24; c++) {
+      const picked = shuffle(ITEMS).slice(0, 24);
+      const cells = [...picked.slice(0, 12), FREE_TEXT, ...picked.slice(12)];
+      const card = document.createElement('div');
+      card.className = 'bingo-card';
+      const header = document.createElement('div');
+      header.className = 'card-header';
+      ['B','I','N','G','O'].forEach(l => {
+        const s = document.createElement('span');
+        s.textContent = l;
+        header.appendChild(s);
+      });
+      card.appendChild(header);
+      const bingoGrid = document.createElement('div');
+      bingoGrid.className = 'bingo-grid';
+      cells.forEach(txt => {
+        const cell = document.createElement('div');
+        const isFree = txt === FREE_TEXT;
+        cell.className = 'bingo-cell' + (isFree ? ' free' : '');
+        cell.textContent = txt;
+        if (!isFree) cell.addEventListener('click', () => cell.classList.toggle('marked'));
+        bingoGrid.appendChild(cell);
+      });
+      card.appendChild(bingoGrid);
+      const footer = document.createElement('div');
+      footer.className = 'card-footer';
+      footer.textContent = 'Card #' + (c + 1) + ' · ' + today;
+      card.appendChild(footer);
+      grid.appendChild(card);
+    }
+  }
+
+  function clearMarks() {
+    document.querySelectorAll('.bingo-cell.marked').forEach(c => c.classList.remove('marked'));
+  }
+
+  generateCards();
+</script>
+</body>
+</html>
