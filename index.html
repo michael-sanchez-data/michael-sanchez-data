@@ -84,7 +84,7 @@
   .loading { text-align: center; padding: 3rem; color: #555; font-size: 14px; }
   .empty { text-align: center; padding: 2rem; color: #555; font-size: 13px; }
   .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid #333; border-top-color: #c8a84b; border-radius: 50%; animation: spin 0.7s linear infinite; margin-right: 8px; vertical-align: middle; }
-  @keyframes spin { to { transform: rotate(360deg); } }
+  @frames spin { to { transform: rotate(360deg); } }
 
   .section { display: none; }
   .section.active { display: block; }
@@ -102,7 +102,7 @@
   <p class="subtitle">Federal Election Commission campaign finance research tool</p>
 
   <div class="-notice">
-    Replace <code>YOUR__KEY_HERE</code> in this file with your FEC  key from .data.gov before deploying.
+    Replace <code>YOUR___HERE</code> in this file with your FEC   from .data.gov before deploying.
   </div>
 
   <div class="search-bar">
@@ -221,7 +221,7 @@ function fmtDate(d) {
 
 async function apiFetch(path, params) {
   const url = new URL(BASE + path);
-  url.searchParams.set('api_key', API_KEY);
+  url.searchParams.set('api_key', Owja1e0xzvz0mQKUd9cA6QSSCVCcLzHh9q6dbAGC);
   for (const [k, v] of Object.entries(params)) {
     if (v !== '' && v !== null && v !== undefined) url.searchParams.set(k, v);
   }
