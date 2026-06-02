@@ -115,10 +115,6 @@
   <h1>FEC OPPO DASHBOARD</h1>
   <p class="subtitle">Federal Election Commission campaign finance research tool</p>
 
-  <div class="api-notice" id="apiNotice">
-    ⚠ Replace <code>YOUR_API_KEY_HERE</code> in this file with your FEC API key from api.data.gov
-  </div>
-
   <div class="search-bar">
     <input type="text" id="searchInput" placeholder="Search candidate name..." />
     <select id="cycleSelect">
@@ -273,7 +269,7 @@
 </div>
 
 <script>
-const API_KEY = 'YOUR_API_KEY_HERE';
+const API_KEY = 'Owja1e0xzvz0mQKUd9cA6QSSCVCcLzHh9q6dbAGC';
 const BASE = 'https://api.open.fec.gov/v1';
 
 let currentCandidate = null;
@@ -670,7 +666,7 @@ function switchTab(name) {
   if (sec) sec.classList.add('active');
 }
 
-if (API_KEY !== 'YOUR_API_KEY_HERE') document.getElementById('apiNotice').classList.add('hidden');
+if (API_KEY !== 'Owja1e0xzvz0mQKUd9cA6QSSCVCcLzHh9q6dbAGC') document.getElementById('apiNotice').classList.add('hidden');
 document.getElementById('searchInput').addEventListener('keydown', e => { if (e.key==='Enter') searchCandidates(); });
 </script>
 </body>
