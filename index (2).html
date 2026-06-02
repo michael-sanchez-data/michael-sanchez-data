@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FEC Oppo Research Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: #0f0f0f; color: #e8e6e0; min-height: 100vh; padding: 2rem 1rem; }
+  .container { max-width: 1200px; margin: 0 auto; }
+  h1 { font-family: 'Bangers', cursive; font-size: 2.8rem; letter-spacing: 4px; color: #e8e6e0; margin-bottom: 4px; }
+  .subtitle { font-size: 13px; color: #666; margin-bottom: 1.5rem; }
+  .api-notice { background: #1a1500; border: 1px solid #3a2e00; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #c8a84b; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 8px; }
+  .api-notice code { background: #2a2000; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
+  .api-notice.hidden { display: none; }
+
+  .search-bar { display: flex; gap: 10px; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .search-bar input, .search-bar select { background: #1a1a1a; border: 1px solid #333; border-radius: 8px; padding: 10px 14px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: #e8e6e0; }
+  .search-bar input { flex: 2; min-width: 200px; }
+  .search-bar select { flex: 1; min-width: 130px; }
+  .search-bar input:focus, .search-bar select:focus { outline: none; border-color: #c8a84b; }
+  .btn-search { background: #c8a84b; color: #0f0f0f; border: none; padding: 10px 24px; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .btn-search:hover { background: #d4b85a; }
+  .btn-search:disabled { background: #444; color: #888; cursor: not-allowed; }
+
+  .candidate-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin-bottom: 1.5rem; }
+  .candidate-card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 10px; padding: 1rem; cursor: pointer; transition: border-color 0.15s; }
+  .candidate-card:hover, .candidate-card.selected { border-color: #c8a84b; background: #1e1c15; }
+  .cand-name { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .cand-meta { font-size: 11px; color: #666; margin-bottom: 6px; }
+  .cand-party { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px; }
+  .party-R { background: #3d1515; color: #f08080; }
+  .party-D { background: #152040; color: #80a8f0; }
+  .party-I, .party- { background: #222; color: #aaa; }
+
+  .tabs { display: flex; gap: 4px; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .tab { background: #1a1a1a; border: 1px solid #2a2a2a; padding: 8px 16px; border-radius: 8px; font-size: 13px; color: #888; cursor: pointer; transition: all 0.1s; }
+  .tab:hover { color: #e8e6e0; }
+  .tab.active { background: #c8a84b; color: #0f0f0f; border-color: #c8a84b; font-weight: 600; }
+
+  .section { display: none; }
+  .section.active { display: block; }
+
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+  .stat-card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 10px; padding: 1rem; }
+  .stat-label { font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .stat-value { font-size: 20px; font-weight: 600; color: #c8a84b; }
+  .stat-sub { font-size: 10px; color: #555; margin-top: 2px; }
+
+  .chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 16px; margin-bottom: 1.5rem; }
+  .chart-box { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 10px; padding: 1.25rem; }
+  .chart-title { font-size: 13px; font-weight: 600; color: #aaa; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.5px; }
+  .chart-box canvas { max-height: 240px; }
+
+  .table-wrap { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 10px; overflow: hidden; margin-bottom: 1.5rem; }
+  .table-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid #2a2a2a; }
+  .table-title { font-size: 13px; font-weight: 600; }
+  .table-count { font-size: 11px; color: #555; }
+  table { width: 100%; border-collapse: collapse; }
+  th { font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 0.5px; padding: 9px 12px; text-align: left; border-bottom: 1px solid #222; background: #161616; white-space: nowrap; }
+  td { font-size: 12px; padding: 8px 12px; border-bottom: 1px solid #1e1e1e; color: #bbb; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #1e1e1e; }
+  .amount { color: #c8a84b; font-weight: 500; font-family: monospace; font-size: 12px; }
+  .flag { display: inline-block; font-size: 9px; padding: 1px 5px; border-radius: 3px; margin-left: 4px; vertical-align: middle; }
+  .flag-red { background: #3d1515; color: #f08080; }
+  .flag-yellow { background: #2a2010; color: #c8a84b; }
+  .flag-blue { background: #152040; color: #80a8f0; }
+
+  .filing-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #1e1e1e; font-size: 12px; }
+  .filing-row:last-child { border-bottom: none; }
+  .filing-name { flex: 2; color: #ccc; }
+  .filing-date { color: #666; min-width: 100px; }
+  .filing-amount { color: #c8a84b; font-family: monospace; min-width: 100px; text-align: right; }
+  .filing-late { font-size: 10px; background: #3d1515; color: #f08080; padding: 2px 6px; border-radius: 3px; }
+  .filing-ok { font-size: 10px; background: #0a2010; color: #60c080; padding: 2px 6px; border-radius: 3px; }
+
+  .oppo-flags { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem; }
+  .oppo-title { font-size: 13px; font-weight: 600; color: #f08080; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .oppo-item { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid #1e1e1e; font-size: 13px; line-height: 1.5; }
+  .oppo-item:last-child { border-bottom: none; }
+  .oppo-icon { font-size: 18px; flex-shrink: 0; width: 24px; }
+  .oppo-text { color: #bbb; }
+  .oppo-text strong { color: #f08080; }
+  .oppo-text.ok strong { color: #60c080; }
+
+  .employer-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid #1e1e1e; }
+  .employer-row:last-child { border-bottom: none; }
+  .employer-name { font-size: 12px; color: #ccc; flex: 2; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .employer-bar-wrap { flex: 3; background: #111; border-radius: 3px; height: 6px; }
+  .employer-bar-fill { height: 6px; background: #c8a84b; border-radius: 3px; min-width: 3px; transition: width 0.3s; }
+  .employer-amount { font-size: 11px; color: #c8a84b; font-family: monospace; min-width: 80px; text-align: right; }
+
+  .pagination { display: flex; gap: 6px; justify-content: center; padding: 12px; flex-wrap: wrap; }
+  .page-btn { background: #1a1a1a; border: 1px solid #2a2a2a; color: #666; padding: 5px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+  .page-btn:hover { border-color: #c8a84b; color: #c8a84b; }
+  .page-btn.active { background: #c8a84b; color: #0f0f0f; border-color: #c8a84b; font-weight: 600; }
+  .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .loading { text-align: center; padding: 3rem; color: #555; font-size: 14px; }
+  .empty { text-align: center; padding: 2rem; color: #555; font-size: 13px; }
+  .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid #333; border-top-color: #c8a84b; border-radius: 50%; animation: spin 0.7s linear infinite; margin-right: 8px; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 600px) {
+    .chart-grid { grid-template-columns: 1fr; }
+    h1 { font-size: 2rem; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>FEC OPPO DASHBOARD</h1>
+  <p class="subtitle">Federal Election Commission campaign finance research tool</p>
+
+  <div class="api-notice" id="apiNotice">
+    ⚠ Replace <code>YOUR_API_KEY_HERE</code> in this file with your FEC API key from api.data.gov
+  </div>
+
+  <div class="search-bar">
+    <input type="text" id="searchInput" placeholder="Search candidate name..." />
+    <select id="cycleSelect">
+      <option value="2026">2026 Cycle</option>
+      <option value="2024" selected>2024 Cycle</option>
+      <option value="2022">2022 Cycle</option>
+      <option value="2020">2020 Cycle</option>
+      <option value="2018">2018 Cycle</option>
+      <option value="2016">2016 Cycle</option>
+    </select>
+    <select id="officeSelect">
+      <option value="">All offices</option>
+      <option value="P">President</option>
+      <option value="S">Senate</option>
+      <option value="H">House</option>
+    </select>
+    <button class="btn-search" id="searchBtn" onclick="searchCandidates()">Search</button>
+  </div>
+
+  <div class="candidate-list" id="candidateList"></div>
+
+  <div id="mainDash" style="display:none">
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('overview')">Overview</div>
+      <div class="tab" onclick="switchTab('quarterly')">Quarterly Trends</div>
+      <div class="tab" onclick="switchTab('donors')">Top Donors</div>
+      <div class="tab" onclick="switchTab('employers')">Employers</div>
+      <div class="tab" onclick="switchTab('spending')">Spending</div>
+      <div class="tab" onclick="switchTab('filings')">Filings</div>
+      <div class="tab" onclick="switchTab('oppo')">Oppo Flags</div>
+    </div>
+
+    <!-- OVERVIEW -->
+    <div id="sec-overview" class="section active">
+      <div class="stats-row" id="statsRow"></div>
+      <div class="chart-grid">
+        <div class="chart-box">
+          <div class="chart-title">Funding Sources Breakdown</div>
+          <canvas id="fundingPie"></canvas>
+        </div>
+        <div class="chart-box">
+          <div class="chart-title">Raised vs Spent vs Cash on Hand</div>
+          <canvas id="raisedBar"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- QUARTERLY TRENDS -->
+    <div id="sec-quarterly" class="section">
+      <div class="chart-grid">
+        <div class="chart-box" style="grid-column: 1 / -1">
+          <div class="chart-title">Quarterly Fundraising — Total Receipts per Report Period</div>
+          <canvas id="quarterlyBar" style="max-height:300px"></canvas>
+        </div>
+        <div class="chart-box" style="grid-column: 1 / -1">
+          <div class="chart-title">Cash on Hand Trend</div>
+          <canvas id="cashLine" style="max-height:260px"></canvas>
+        </div>
+        <div class="chart-box">
+          <div class="chart-title">Burn Rate by Quarter (Spent / Raised %)</div>
+          <canvas id="burnBar" style="max-height:240px"></canvas>
+        </div>
+        <div class="chart-box">
+          <div class="chart-title">Individual vs PAC Contributions by Quarter</div>
+          <canvas id="indivPacBar" style="max-height:240px"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- DONORS -->
+    <div id="sec-donors" class="section">
+      <div class="table-wrap">
+        <div class="table-header">
+          <span class="table-title">Individual Donors</span>
+          <span class="table-count" id="donorCount"></span>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr>
+              <th>Name</th><th>Employer</th><th>Occupation</th>
+              <th>Location</th><th>Amount</th><th>Date</th>
+            </tr></thead>
+            <tbody id="donorTable"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="donorPagination"></div>
+      </div>
+    </div>
+
+    <!-- EMPLOYERS -->
+    <div id="sec-employers" class="section">
+      <div class="table-wrap">
+        <div class="table-header">
+          <span class="table-title">Top Employer Sources</span>
+          <span class="table-count" id="employerCount"></span>
+        </div>
+        <div style="padding: 1rem" id="employerBars"></div>
+      </div>
+      <div class="chart-box" style="margin-bottom:1.5rem">
+        <div class="chart-title">Top 10 Employers by Total Donations</div>
+        <canvas id="employerChart" style="max-height:280px"></canvas>
+      </div>
+    </div>
+
+    <!-- SPENDING -->
+    <div id="sec-spending" class="section">
+      <div class="chart-box" style="margin-bottom:1.5rem">
+        <div class="chart-title">Top Spending Categories</div>
+        <canvas id="spendingPie" style="max-height:260px"></canvas>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <span class="table-title">Disbursements</span>
+          <span class="table-count" id="spendingCount"></span>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr>
+              <th>Recipient</th><th>Purpose</th><th>Location</th>
+              <th>Amount</th><th>Date</th>
+            </tr></thead>
+            <tbody id="spendingTable"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="spendingPagination"></div>
+      </div>
+    </div>
+
+    <!-- FILINGS -->
+    <div id="sec-filings" class="section">
+      <div class="table-wrap">
+        <div class="table-header">
+          <span class="table-title">FEC Filing History</span>
+          <span class="table-count" id="filingCount"></span>
+        </div>
+        <div style="padding: 1rem" id="filingList"></div>
+      </div>
+    </div>
+
+    <!-- OPPO FLAGS -->
+    <div id="sec-oppo" class="section">
+      <div class="oppo-flags">
+        <div class="oppo-title">⚑ Automated Oppo Research Flags</div>
+        <div id="oppoList"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="loadingMsg" class="loading" style="display:none">
+    <span class="spinner"></span> Loading FEC data...
+  </div>
+</div>
+
+<script>
+const API_KEY = 'YOUR_API_KEY_HERE';
+const BASE = 'https://api.open.fec.gov/v1';
+
+let currentCandidate = null;
+let allDonors = [];
+let allSpending = [];
+let allFilings = [];
+let allTotals = [];
+let donorPage = 1;
+let spendingPage = 1;
+const PAGE_SIZE = 25;
+
+let chartInstances = {};
+
+function destroyChart(id) {
+  if (chartInstances[id]) { chartInstances[id].destroy(); delete chartInstances[id]; }
+}
+
+function fmt(n) { if (!n && n !== 0) return '—'; return '$' + Math.round(n).toLocaleString(); }
+function fmtDate(d) { if (!d) return ''; return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
+function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/'/g,"\\'"); }
+
+const CHART_DEFAULTS = {
+  color: '#e8e6e0',
+  grid: '#222',
+  gold: '#c8a84b',
+  blue: '#4a80d4',
+  red: '#e05555',
+  green: '#50a060',
+  muted: '#555'
+};
+
+function chartOpts(type) {
+  return {
+    responsive: true,
+    plugins: {
+      legend: { labels: { color: '#aaa', font: { family: 'DM Sans', size: 11 }, boxWidth: 12 } },
+      tooltip: { backgroundColor: '#1a1a1a', titleColor: '#e8e6e0', bodyColor: '#aaa', borderColor: '#333', borderWidth: 1 }
+    },
+    scales: type === 'pie' || type === 'doughnut' ? {} : {
+      x: { ticks: { color: '#666', font: { size: 10 } }, grid: { color: '#1e1e1e' } },
+      y: { ticks: { color: '#666', font: { size: 10 }, callback: v => '$'+Math.round(v).toLocaleString() }, grid: { color: '#1e1e1e' } }
+    }
+  };
+}
+
+async function apiFetch(path, params) {
+  const url = new URL(BASE + path);
+  url.searchParams.set('api_key', API_KEY);
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== '' && v !== null && v !== undefined) url.searchParams.set(k, v);
+  }
+  const res = await fetch(url.toString());
+  if (!res.ok) throw new Error('API ' + res.status);
+  return res.json();
+}
+
+async function searchCandidates() {
+  const q = document.getElementById('searchInput').value.trim();
+  if (!q) return;
+  const cycle = document.getElementById('cycleSelect').value;
+  const office = document.getElementById('officeSelect').value;
+  const btn = document.getElementById('searchBtn');
+  btn.disabled = true; btn.textContent = 'Searching...';
+  document.getElementById('candidateList').innerHTML = '<div class="loading"><span class="spinner"></span> Searching...</div>';
+  document.getElementById('mainDash').style.display = 'none';
+  try {
+    const data = await apiFetch('/candidates/search/', { q, election_year: cycle, office, per_page: 12, sort: '-receipts' });
+    renderCandidates(data.results || []);
+  } catch(e) {
+    document.getElementById('candidateList').innerHTML = '<div class="empty">Error — check your API key is set correctly.</div>';
+  }
+  btn.disabled = false; btn.textContent = 'Search';
+}
+
+function renderCandidates(candidates) {
+  const el = document.getElementById('candidateList');
+  if (!candidates.length) { el.innerHTML = '<div class="empty">No candidates found.</div>'; return; }
+  el.innerHTML = candidates.map(c => `
+    <div class="candidate-card" onclick="selectCandidate('${c.candidate_id}','${escHtml(c.name)}','${c.party||''}','${c.office||''}','${c.state||''}', this)">
+      <div class="cand-name">${c.name}</div>
+      <div class="cand-meta">${c.office_full||c.office||''} · ${c.state||'US'} · ${(c.election_years||[]).join(', ')}</div>
+      <span class="cand-party party-${c.party||'I'}">${c.party||'UNK'}</span>
+    </div>
+  `).join('');
+}
+
+async function selectCandidate(id, name, party, office, state, cardEl) {
+  document.querySelectorAll('.candidate-card').forEach(c => c.classList.remove('selected'));
+  if (cardEl) cardEl.classList.add('selected');
+  currentCandidate = { id, name, party, office, state };
+  document.getElementById('mainDash').style.display = 'block';
+  document.getElementById('loadingMsg').style.display = 'block';
+  switchTab('overview');
+  allDonors = []; allSpending = []; allFilings = []; allTotals = [];
+  donorPage = 1; spendingPage = 1;
+
+  try {
+    const cycle = document.getElementById('cycleSelect').value;
+    const [financeData, donorData, spendData, filingData, totalsHistory] = await Promise.all([
+      apiFetch('/candidate/' + id + '/totals/', { cycle, per_page: 20 }),
+      apiFetch('/schedules/schedule_a/', { candidate_id: id, two_year_transaction_period: cycle, per_page: 100, sort: '-contribution_receipt_amount' }),
+      apiFetch('/schedules/schedule_b/', { candidate_id: id, two_year_transaction_period: cycle, per_page: 100, sort: '-disbursement_amount' }),
+      apiFetch('/filings/', { candidate_id: id, cycle, per_page: 40, sort: '-receipt_date' }),
+      apiFetch('/candidate/' + id + '/totals/', { per_page: 40, sort: 'coverage_end_date' })
+    ]);
+
+    allDonors = donorData.results || [];
+    allSpending = spendData.results || [];
+    allFilings = filingData.results || [];
+    allTotals = (totalsHistory.results || []).filter(t => t.receipts > 0);
+
+    const totals = financeData.results && financeData.results[0] ? financeData.results[0] : {};
+    renderOverview(totals);
+    renderQuarterly();
+    renderDonors();
+    renderEmployers();
+    renderSpending();
+    renderFilings();
+    renderOppo(totals);
+  } catch(e) {
+    document.getElementById('statsRow').innerHTML = '<div class="empty">Could not load data. Check API key.</div>';
+  }
+  document.getElementById('loadingMsg').style.display = 'none';
+}
+
+function renderOverview(t) {
+  document.getElementById('statsRow').innerHTML = [
+    { label: 'Total Raised', value: fmt(t.receipts), sub: 'all sources' },
+    { label: 'Total Spent', value: fmt(t.disbursements), sub: 'disbursements' },
+    { label: 'Cash on Hand', value: fmt(t.last_cash_on_hand_end_period), sub: 'end of period' },
+    { label: 'Individual Donors', value: fmt(t.individual_itemized_contributions), sub: 'itemized' },
+    { label: 'PAC Money', value: fmt(t.other_political_committee_contributions), sub: 'from PACs' },
+    { label: 'Self Funded', value: fmt(t.candidate_contribution), sub: 'candidate cash' },
+    { label: 'Small Donors', value: fmt(t.individual_unitemized_contributions), sub: 'under $200' },
+    { label: 'Burn Rate', value: t.receipts ? Math.round((t.disbursements/t.receipts)*100)+'%' : '—', sub: 'spent / raised' },
+  ].map(s => `<div class="stat-card"><div class="stat-label">${s.label}</div><div class="stat-value">${s.value}</div><div class="stat-sub">${s.sub}</div></div>`).join('');
+
+  // Funding pie
+  destroyChart('fundingPie');
+  const indiv = t.individual_itemized_contributions || 0;
+  const pac = t.other_political_committee_contributions || 0;
+  const self = t.candidate_contribution || 0;
+  const small = t.individual_unitemized_contributions || 0;
+  const other = Math.max(0, (t.receipts||0) - indiv - pac - self - small);
+  const ctx1 = document.getElementById('fundingPie').getContext('2d');
+  chartInstances['fundingPie'] = new Chart(ctx1, {
+    type: 'doughnut',
+    data: {
+      labels: ['Individual (itemized)', 'PAC / Committee', 'Self-funded', 'Small donors (<$200)', 'Other'],
+      datasets: [{ data: [indiv, pac, self, small, other], backgroundColor: ['#c8a84b','#4a80d4','#e05555','#50a060','#666'], borderWidth: 0 }]
+    },
+    options: { ...chartOpts('doughnut'), plugins: { ...chartOpts('doughnut').plugins, tooltip: { ...chartOpts('doughnut').plugins.tooltip, callbacks: { label: ctx => ' ' + fmt(ctx.raw) } } } }
+  });
+
+  // Raised vs spent bar
+  destroyChart('raisedBar');
+  const ctx2 = document.getElementById('raisedBar').getContext('2d');
+  chartInstances['raisedBar'] = new Chart(ctx2, {
+    type: 'bar',
+    data: {
+      labels: ['Total Raised', 'Total Spent', 'Cash on Hand'],
+      datasets: [{ data: [t.receipts||0, t.disbursements||0, t.last_cash_on_hand_end_period||0], backgroundColor: ['#c8a84b','#e05555','#50a060'], borderWidth: 0, borderRadius: 4 }]
+    },
+    options: { ...chartOpts('bar'), plugins: { ...chartOpts('bar').plugins, legend: { display: false } } }
+  });
+}
+
+function renderQuarterly() {
+  if (!allTotals.length) {
+    ['quarterlyBar','cashLine','burnBar','indivPacBar'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.parentElement.innerHTML += '<div class="empty" style="margin-top:-1rem">No quarterly data available.</div>';
+    });
+    return;
+  }
+
+  const labels = allTotals.map(t => {
+    const d = new Date(t.coverage_end_date || t.last_report_year + '-12-31');
+    return (t.last_report_type_full || '') + ' ' + (t.last_report_year || d.getFullYear());
+  });
+
+  // Quarterly fundraising
+  destroyChart('quarterlyBar');
+  const ctx1 = document.getElementById('quarterlyBar').getContext('2d');
+  chartInstances['quarterlyBar'] = new Chart(ctx1, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ label: 'Total Receipts', data: allTotals.map(t => t.receipts||0), backgroundColor: '#c8a84b', borderWidth: 0, borderRadius: 4 }]
+    },
+    options: { ...chartOpts('bar'), plugins: { ...chartOpts('bar').plugins, legend: { display: false } } }
+  });
+
+  // Cash on hand line
+  destroyChart('cashLine');
+  const ctx2 = document.getElementById('cashLine').getContext('2d');
+  chartInstances['cashLine'] = new Chart(ctx2, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{ label: 'Cash on Hand', data: allTotals.map(t => t.last_cash_on_hand_end_period||0), borderColor: '#50a060', backgroundColor: 'rgba(80,160,96,0.1)', tension: 0.3, fill: true, pointBackgroundColor: '#50a060', pointRadius: 4 }]
+    },
+    options: chartOpts('line')
+  });
+
+  // Burn rate
+  destroyChart('burnBar');
+  const ctx3 = document.getElementById('burnBar').getContext('2d');
+  chartInstances['burnBar'] = new Chart(ctx3, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ label: 'Burn Rate %', data: allTotals.map(t => t.receipts ? Math.round((t.disbursements/t.receipts)*100) : 0), backgroundColor: allTotals.map(t => { const r = t.receipts ? (t.disbursements/t.receipts)*100 : 0; return r > 90 ? '#e05555' : r > 70 ? '#c8a84b' : '#50a060'; }), borderWidth: 0, borderRadius: 4 }]
+    },
+    options: { ...chartOpts('bar'), plugins: { ...chartOpts('bar').plugins, legend: { display: false }, tooltip: { callbacks: { label: ctx => ' ' + ctx.raw + '%' } } }, scales: { x: { ticks: { color: '#666', font: { size: 10 } }, grid: { color: '#1e1e1e' } }, y: { ticks: { color: '#666', font: { size: 10 }, callback: v => v+'%' }, grid: { color: '#1e1e1e' }, max: 150 } } }
+  });
+
+  // Individual vs PAC
+  destroyChart('indivPacBar');
+  const ctx4 = document.getElementById('indivPacBar').getContext('2d');
+  chartInstances['indivPacBar'] = new Chart(ctx4, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Individual', data: allTotals.map(t => t.individual_itemized_contributions||0), backgroundColor: '#c8a84b', borderWidth: 0, borderRadius: 4 },
+        { label: 'PAC / Committee', data: allTotals.map(t => t.other_political_committee_contributions||0), backgroundColor: '#4a80d4', borderWidth: 0, borderRadius: 4 }
+      ]
+    },
+    options: { ...chartOpts('bar') }
+  });
+}
+
+function renderDonors() {
+  const start = (donorPage - 1) * PAGE_SIZE;
+  const page = allDonors.slice(start, start + PAGE_SIZE);
+  document.getElementById('donorCount').textContent = allDonors.length + ' donors';
+  const tbody = document.getElementById('donorTable');
+  if (!allDonors.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">No donor data.</td></tr>'; return; }
+  tbody.innerHTML = page.map(d => {
+    const outOfState = d.contributor_state && currentCandidate.state && d.contributor_state !== currentCandidate.state;
+    const maxOut = (d.contribution_receipt_amount || 0) >= 2800;
+    return `<tr>
+      <td>${d.contributor_name||'—'}${outOfState?'<span class="flag flag-yellow">out-of-state</span>':''}${maxOut?'<span class="flag flag-red">max-out</span>':''}</td>
+      <td>${d.contributor_employer||'—'}</td>
+      <td>${d.contributor_occupation||'—'}</td>
+      <td>${[d.contributor_city, d.contributor_state].filter(Boolean).join(', ')||'—'}</td>
+      <td class="amount">${fmt(d.contribution_receipt_amount)}</td>
+      <td>${fmtDate(d.contribution_receipt_date)}</td>
+    </tr>`;
+  }).join('');
+  renderPagination('donorPagination', allDonors.length, donorPage, p => { donorPage = p; renderDonors(); });
+}
+
+function renderEmployers() {
+  const empMap = {};
+  allDonors.forEach(d => {
+    const emp = (d.contributor_employer||'Unknown').trim() || 'Unknown';
+    empMap[emp] = (empMap[emp]||0) + (d.contribution_receipt_amount||0);
+  });
+  const sorted = Object.entries(empMap).sort((a,b)=>b[1]-a[1]).slice(0,20);
+  document.getElementById('employerCount').textContent = Object.keys(empMap).length + ' employers';
+  const max = sorted[0] ? sorted[0][1] : 1;
+  document.getElementById('employerBars').innerHTML = sorted.map(([emp, amt]) => `
+    <div class="employer-row">
+      <div class="employer-name" title="${emp}">${emp}</div>
+      <div class="employer-bar-wrap"><div class="employer-bar-fill" style="width:${Math.round((amt/max)*100)}%"></div></div>
+      <div class="employer-amount">${fmt(amt)}</div>
+    </div>
+  `).join('') || '<div class="empty">No data.</div>';
+
+  destroyChart('employerChart');
+  const top10 = sorted.slice(0,10);
+  const ctx = document.getElementById('employerChart').getContext('2d');
+  chartInstances['employerChart'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: top10.map(([e]) => e.length > 20 ? e.substring(0,20)+'…' : e),
+      datasets: [{ label: 'Total Donations', data: top10.map(([,v])=>v), backgroundColor: '#c8a84b', borderWidth: 0, borderRadius: 4 }]
+    },
+    options: { ...chartOpts('bar'), indexAxis: 'y', plugins: { ...chartOpts('bar').plugins, legend: { display: false } }, scales: { x: { ticks: { color: '#666', font: { size: 10 }, callback: v => '$'+Math.round(v/1000)+'k' }, grid: { color: '#1e1e1e' } }, y: { ticks: { color: '#aaa', font: { size: 10 } }, grid: { color: '#1e1e1e' } } } }
+  });
+}
+
+function renderSpending() {
+  const start = (spendingPage - 1) * PAGE_SIZE;
+  const page = allSpending.slice(start, start + PAGE_SIZE);
+  document.getElementById('spendingCount').textContent = allSpending.length + ' disbursements';
+  const tbody = document.getElementById('spendingTable');
+  if (!allSpending.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty">No spending data.</td></tr>'; return; }
+  tbody.innerHTML = page.map(d => `<tr>
+    <td>${d.recipient_name||'—'}</td>
+    <td>${d.disbursement_description||'—'}</td>
+    <td>${[d.recipient_city, d.recipient_state].filter(Boolean).join(', ')||'—'}</td>
+    <td class="amount">${fmt(d.disbursement_amount)}</td>
+    <td>${fmtDate(d.disbursement_date)}</td>
+  </tr>`).join('');
+  renderPagination('spendingPagination', allSpending.length, spendingPage, p => { spendingPage = p; renderSpending(); });
+
+  // Spending category pie
+  destroyChart('spendingPie');
+  const catMap = {};
+  allSpending.forEach(d => {
+    const cat = (d.disbursement_description||'Other').split(' ').slice(0,3).join(' ');
+    catMap[cat] = (catMap[cat]||0) + (d.disbursement_amount||0);
+  });
+  const top8 = Object.entries(catMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const colors = ['#c8a84b','#4a80d4','#e05555','#50a060','#a04ab8','#d47a3a','#40a0b0','#888'];
+  const ctx = document.getElementById('spendingPie').getContext('2d');
+  chartInstances['spendingPie'] = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels: top8.map(([k])=>k), datasets: [{ data: top8.map(([,v])=>v), backgroundColor: colors, borderWidth: 0 }] },
+    options: { ...chartOpts('doughnut'), plugins: { ...chartOpts('doughnut').plugins, tooltip: { callbacks: { label: ctx => ' ' + fmt(ctx.raw) } } } }
+  });
+}
+
+function renderFilings() {
+  document.getElementById('filingCount').textContent = allFilings.length + ' filings';
+  if (!allFilings.length) { document.getElementById('filingList').innerHTML = '<div class="empty">No filing data.</div>'; return; }
+  document.getElementById('filingList').innerHTML = allFilings.map(f => {
+    const isLate = f.is_amended === false && f.amendment_indicator === 'N' && false; // simplified
+    const reportType = f.report_type_full || f.report_type || '—';
+    return `<div class="filing-row">
+      <div class="filing-name">${reportType} <span style="color:#555;font-size:11px">${f.form_type||''}</span></div>
+      <div class="filing-date">${fmtDate(f.receipt_date)}</div>
+      <div class="filing-amount amount">${fmt(f.total_receipts)}</div>
+      <span class="${f.is_amended ? 'filing-late' : 'filing-ok'}">${f.is_amended ? 'Amended' : 'Original'}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderOppo(t) {
+  const flags = [];
+  const total = t.receipts || 1;
+  const pac = t.other_political_committee_contributions || 0;
+  const pacPct = Math.round((pac/total)*100);
+  const self = t.candidate_contribution || 0;
+  const indiv = t.individual_itemized_contributions || 0;
+  const small = t.individual_unitemized_contributions || 0;
+  const spent = t.disbursements || 0;
+  const burnRate = Math.round((spent/total)*100);
+
+  if (pacPct > 30) flags.push({ icon: '🚩', text: `<strong>${pacPct}% PAC-funded</strong> — ${fmt(pac)} of ${fmt(total)} came from PACs or committees. Strong "bought and paid for" angle.` });
+  if (self > 100000) flags.push({ icon: '💰', text: `<strong>Self-funded ${fmt(self)}</strong> — candidate injected significant personal wealth. Research the source of that money.` });
+
+  const outOfState = allDonors.filter(d => d.contributor_state && currentCandidate.state && d.contributor_state !== currentCandidate.state);
+  const oosPct = allDonors.length ? Math.round((outOfState.length/allDonors.length)*100) : 0;
+  if (oosPct > 40) flags.push({ icon: '🗺️', text: `<strong>${oosPct}% out-of-state donors</strong> (${outOfState.length} of ${allDonors.length}). Undermines "local champion" messaging.` });
+
+  const maxOuts = allDonors.filter(d => (d.contribution_receipt_amount||0) >= 2800);
+  if (maxOuts.length > 5) flags.push({ icon: '⚑', text: `<strong>${maxOuts.length} max-out donors ($2,800+)</strong> — significant bundler activity. Research each for lobbying ties.` });
+
+  const empMap = {};
+  allDonors.forEach(d => { const e = d.contributor_employer||''; if(e && e !== 'RETIRED' && e !== 'SELF-EMPLOYED') empMap[e] = (empMap[e]||0)+1; });
+  const top = Object.entries(empMap).sort((a,b)=>b[1]-a[1])[0];
+  if (top && top[1] > 4) flags.push({ icon: '🏢', text: `<strong>${top[1]} donors from "${top[0]}"</strong> — concentrated corporate giving. Cross-reference with lobbying disclosures.` });
+
+  if (burnRate > 90) flags.push({ icon: '📉', text: `<strong>Burn rate: ${burnRate}%</strong> — spending nearly everything raised. Possible financial distress or poor management.` });
+
+  const consultSpend = allSpending.filter(d => (d.disbursement_description||'').toLowerCase().match(/consult|strateg|advis/));
+  const consultTotal = consultSpend.reduce((s,d)=>s+(d.disbursement_amount||0), 0);
+  if (consultTotal > 25000) flags.push({ icon: '🤝', text: `<strong>${fmt(consultTotal)} to consultants/strategists</strong> — research these firms for other clients and political ties.` });
+
+  const amended = allFilings.filter(f => f.is_amended);
+  if (amended.length > 2) flags.push({ icon: '📋', text: `<strong>${amended.length} amended filings</strong> — multiple corrections to FEC reports. Could indicate sloppy recordkeeping or intentional errors.` });
+
+  const smallPct = Math.round((small/total)*100);
+  if (smallPct > 50) flags.push({ icon: '✅', text: `<strong class="ok">${smallPct}% small-dollar donors</strong> — majority of money from donors under $200. Genuine grassroots signal (harder to attack).`, ok: true });
+
+  if (!flags.length) flags.push({ icon: '✓', text: 'No major flags from available data. Dig deeper in the Donors and Spending tabs.', ok: true });
+
+  document.getElementById('oppoList').innerHTML = flags.map(f => `
+    <div class="oppo-item"><span class="oppo-icon">${f.icon}</span><span class="oppo-text${f.ok?' ok':''}">${f.text}</span></div>
+  `).join('');
+}
+
+function renderPagination(id, total, current, cb) {
+  const pages = Math.ceil(total / PAGE_SIZE);
+  if (pages <= 1) { document.getElementById(id).innerHTML = ''; return; }
+  let html = `<button class="page-btn" ${current===1?'disabled':''} onclick="(${cb})(${current-1})">← Prev</button>`;
+  const start = Math.max(1, current-3), end = Math.min(pages, current+3);
+  if (start > 1) html += `<button class="page-btn" onclick="(${cb})(1)">1</button><span style="color:#555;padding:5px">…</span>`;
+  for (let i = start; i <= end; i++) html += `<button class="page-btn${i===current?' active':''}" onclick="(${cb})(${i})">${i}</button>`;
+  if (end < pages) html += `<span style="color:#555;padding:5px">…</span><button class="page-btn" onclick="(${cb})(${pages})">${pages}</button>`;
+  html += `<button class="page-btn" ${current===pages?'disabled':''} onclick="(${cb})(${current+1})">Next →</button>`;
+  document.getElementById(id).innerHTML = html;
+}
+
+function switchTab(name) {
+  const names = ['overview','quarterly','donors','employers','spending','filings','oppo'];
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', names[i]===name));
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  const sec = document.getElementById('sec-'+name);
+  if (sec) sec.classList.add('active');
+}
+
+if (API_KEY !== 'YOUR_API_KEY_HERE') document.getElementById('apiNotice').classList.add('hidden');
+document.getElementById('searchInput').addEventListener('keydown', e => { if (e.key==='Enter') searchCandidates(); });
+</script>
+</body>
+</html>
